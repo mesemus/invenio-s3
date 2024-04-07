@@ -57,9 +57,10 @@ See `Amazon Boto3 documentation on presigned URLs
 for more information.
 """
 
-S3_UPLOAD_URL_EXPIRATION = 3600 * 24 * 14
-"""Number of seconds the file upload URL will be valid. The default here is 14 days
-to allow large file uploads with large number of chunks to be completed.
+S3_UPLOAD_URL_EXPIRATION = 3600 * 24 * 7
+"""Number of seconds the file upload URL will be valid. The default here is 7 days
+to allow large file uploads with large number of chunks to be completed. This is
+currently the maximum allowed by the AWS.
 
 See `Amazon Boto3 documentation on presigned URLs
 <https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.generate_presigned_url>`_
