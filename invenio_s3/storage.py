@@ -221,8 +221,8 @@ class S3FSFileStorage(PyFSFileStorage):
         """Set the content of a part of the multipart upload.
 
         This method will never be called
-        by invenio as user will use direct pre-signed requests to invenio and will never
-        upload the files through invenio.
+        by invenio as user will use direct pre-signed requests to S3 and will never
+        upload the files through Invenio.
         """
         raise NotImplementedError(
             "The multipart_set_content method is not implemented as it will never be called directly."
