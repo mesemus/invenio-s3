@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) 2018, 2019, 2020, 2021 Esteban J. G. Gabancho.
+#               2024 Miroslav Simek
 #
 # Invenio-S3 is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 
 """S3 file storage interface."""
-import datetime
+
 from functools import partial, wraps
 from math import ceil
-from typing import Union, Dict, Any
+from typing import Any, Dict, Union
 
 import s3fs
 from flask import current_app
 from invenio_files_rest.errors import StorageError
 from invenio_files_rest.storage import PyFSFileStorage, pyfs_storage_factory
-from s3fs import S3FileSystem
 
 from .helpers import redirect_stream
 from .low_level import LowLevelS3File
@@ -203,17 +203,27 @@ class S3FSFileStorage(PyFSFileStorage):
         :returns: a dictionary of additional metadata that should be stored between
             the initialization and the commit of the upload.
         """
-        # WARNING: low-level code. The underlying s3fs currently does not have support
-        # for multipart uploads without keeping the S3File instance in memory between requests.
-
         return {"uploadId": self.low_level_file().create_multipart_upload()}
 
     def low_level_file(self, upload_id=None):
+        """Get a low-level file object.
+
+        :param upload_id: The upload ID of the multipart upload, can be none to get a new upload.
+        :returns: an instance of LowLevelS3File.
+        """
+        # WARNING: low-level code. The underlying s3fs currently does not have support
+        # for multipart uploads without keeping the S3File instance in memory between requests.
         return LowLevelS3File(*self._get_fs(), upload_id=upload_id)
 
     def multipart_set_content(
         self, part, stream, content_length, **multipart_metadata
     ) -> Union[None, Dict[str, str]]:
+        """Set the content of a part of the multipart upload.
+
+        This method will never be called
+        by invenio as user will use direct pre-signed requests to invenio and will never
+        upload the files through invenio.
+        """
         raise NotImplementedError(
             "The multipart_set_content method is not implemented as it will never be called directly."
         )

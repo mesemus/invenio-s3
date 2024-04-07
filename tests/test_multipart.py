@@ -56,3 +56,17 @@ def test_multipart_abort(base_app, s3fs):
     upload_metadata |= s3fs.multipart_initialize_upload(**upload_metadata) or {}
 
     s3fs.multipart_abort_upload(**upload_metadata)
+
+
+def test_set_content_not_supported(base_app, s3fs):
+    part_size = 7 * MB
+    last_part_size = 5 * MB
+
+    # initialize the upload
+    upload_metadata = dict(
+        parts=2, part_size=part_size, size=part_size + last_part_size
+    )
+    upload_metadata |= s3fs.multipart_initialize_upload(**upload_metadata) or {}
+
+    with pytest.raises(NotImplementedError):
+        s3fs.multipart_set_content(1, b"0" * part_size, part_size, **upload_metadata)
