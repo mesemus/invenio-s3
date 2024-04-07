@@ -236,7 +236,7 @@ class S3FSFileStorage(PyFSFileStorage):
             and the metadata returned by the multipart_set_content for each part.
         """
         f = self.low_level_file(multipart_metadata["uploadId"])
-        expected_parts = multipart_metadata["parts"]
+        expected_parts = int(multipart_metadata["parts"])
         parts = f.get_parts(max_parts=expected_parts)
         if len(parts) != expected_parts:
             raise ValueError(
@@ -263,7 +263,7 @@ class S3FSFileStorage(PyFSFileStorage):
         :returns: a dictionary of name of the link to invenio_records_resources.services.base.links.Link
         """
         return self.low_level_file(multipart_metadata["uploadId"]).get_part_links(
-            multipart_metadata["parts"], current_app.config["S3_UPLOAD_URL_EXPIRATION"]
+            int(multipart_metadata["parts"]), current_app.config["S3_UPLOAD_URL_EXPIRATION"]
         )
 
 
