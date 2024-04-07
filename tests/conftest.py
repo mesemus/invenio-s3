@@ -41,7 +41,7 @@ def s3_bucket(appctx):
     with mock_aws():
         session = boto3.Session(
             aws_access_key_id=current_app.config.get("S3_ACCESS_KEY_ID"),
-            aws_secret_access_key=current_app.config.get("S3_SECRECT_ACCESS_KEY"),
+            aws_secret_access_key=current_app.config.get("S3_SECRET_ACCESS_KEY"),
         )
         s3 = session.resource("s3")
         bucket = s3.create_bucket(Bucket="test_invenio_s3")

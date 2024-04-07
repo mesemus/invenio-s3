@@ -6,16 +6,19 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 
 """S3 file storage interface."""
-
+import datetime
 from functools import partial, wraps
 from math import ceil
+from typing import Union, Dict, Any
 
 import s3fs
 from flask import current_app
 from invenio_files_rest.errors import StorageError
 from invenio_files_rest.storage import PyFSFileStorage, pyfs_storage_factory
+from s3fs import S3FileSystem
 
 from .helpers import redirect_stream
+from .low_level import LowLevelS3File
 
 
 def set_blocksize(f):
@@ -186,6 +189,72 @@ class S3FSFileStorage(PyFSFileStorage):
         Just overwrite parent method to allow set the correct block size.
         """
         return super(S3FSFileStorage, self).save(*args, **kwargs)
+
+    def multipart_initialize_upload(
+        self, parts, size, part_size
+    ) -> Union[None, Dict[str, str]]:
+        """
+        Initialize a multipart upload.
+
+        :param parts: The number of parts that will be uploaded.
+        :param size: The total size of the file.
+        :param part_size: The size of each part except the last one.
+
+        :returns: a dictionary of additional metadata that should be stored between
+            the initialization and the commit of the upload.
+        """
+        # WARNING: low-level code. The underlying s3fs currently does not have support
+        # for multipart uploads without keeping the S3File instance in memory between requests.
+
+        return {"uploadId": self.low_level_file().create_multipart_upload()}
+
+    def low_level_file(self, upload_id=None):
+        return LowLevelS3File(*self._get_fs(), upload_id=upload_id)
+
+    def multipart_set_content(
+        self, part, stream, content_length, **multipart_metadata
+    ) -> Union[None, Dict[str, str]]:
+        raise NotImplementedError(
+            "The multipart_set_content method is not implemented as it will never be called directly."
+        )
+
+    def multipart_commit_upload(self, **multipart_metadata):
+        """
+        Commit the multipart upload.
+
+        :param multipart_metadata: The metadata returned by the multipart_initialize_upload
+            and the metadata returned by the multipart_set_content for each part.
+        """
+        f = self.low_level_file(multipart_metadata["uploadId"])
+        expected_parts = multipart_metadata["parts"]
+        parts = f.get_parts(max_parts=expected_parts)
+        if len(parts) != expected_parts:
+            raise ValueError(
+                f"Not all parts were uploaded, got {len(parts)} out of {expected_parts} parts."
+            )
+        f.complete_multipart_upload(parts)
+
+    def multipart_abort_upload(self, **multipart_metadata):
+        """
+        Abort the multipart upload.
+
+        :param multipart_metadata: The metadata returned by the multipart_initialize_upload
+            and the metadata returned by the multipart_set_content for each part.
+        """
+        f = self.low_level_file(multipart_metadata["uploadId"])
+        f.abort_multipart_upload()
+
+    def multipart_links(self, **multipart_metadata) -> Dict[str, Any]:
+        """
+        Generate links for the parts of the multipart upload.
+
+        :param multipart_metadata: The metadata returned by the multipart_initialize_upload
+            and the metadata returned by the multipart_set_content for each part.
+        :returns: a dictionary of name of the link to invenio_records_resources.services.base.links.Link
+        """
+        return self.low_level_file(multipart_metadata["uploadId"]).get_part_links(
+            multipart_metadata["parts"], current_app.config["S3_UPLOAD_URL_EXPIRATION"]
+        )
 
 
 def s3fs_storage_factory(**kwargs):
