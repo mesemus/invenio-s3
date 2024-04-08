@@ -17,7 +17,7 @@ import datetime
 # LowLevelS3File class.
 
 
-class LowLevelS3File:
+class MultipartS3File:
     """Low level client for S3 multipart uploads."""
 
     def __init__(self, fs, path, upload_id=None):

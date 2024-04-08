@@ -18,7 +18,7 @@ from invenio_files_rest.errors import StorageError
 from invenio_files_rest.storage import PyFSFileStorage, pyfs_storage_factory
 
 from .helpers import redirect_stream
-from .low_level import LowLevelS3File
+from .multipart_client import MultipartS3File
 
 
 def set_blocksize(f):
@@ -203,9 +203,9 @@ class S3FSFileStorage(PyFSFileStorage):
         :returns: a dictionary of additional metadata that should be stored between
             the initialization and the commit of the upload.
         """
-        return {"uploadId": self.low_level_file().create_multipart_upload()}
+        return {"uploadId": self.multipart_file().create_multipart_upload()}
 
-    def low_level_file(self, upload_id=None):
+    def multipart_file(self, upload_id=None):
         """Get a low-level file object.
 
         :param upload_id: The upload ID of the multipart upload, can be none to get a new upload.
@@ -213,7 +213,7 @@ class S3FSFileStorage(PyFSFileStorage):
         """
         # WARNING: low-level code. The underlying s3fs currently does not have support
         # for multipart uploads without keeping the S3File instance in memory between requests.
-        return LowLevelS3File(*self._get_fs(), upload_id=upload_id)
+        return MultipartS3File(*self._get_fs(), upload_id=upload_id)
 
     def multipart_set_content(
         self, part, stream, content_length, **multipart_metadata
@@ -235,7 +235,7 @@ class S3FSFileStorage(PyFSFileStorage):
         :param multipart_metadata: The metadata returned by the multipart_initialize_upload
             and the metadata returned by the multipart_set_content for each part.
         """
-        f = self.low_level_file(multipart_metadata["uploadId"])
+        f = self.multipart_file(multipart_metadata["uploadId"])
         expected_parts = int(multipart_metadata["parts"])
         parts = f.get_parts(max_parts=expected_parts)
         if len(parts) != expected_parts:
@@ -251,7 +251,7 @@ class S3FSFileStorage(PyFSFileStorage):
         :param multipart_metadata: The metadata returned by the multipart_initialize_upload
             and the metadata returned by the multipart_set_content for each part.
         """
-        f = self.low_level_file(multipart_metadata["uploadId"])
+        f = self.multipart_file(multipart_metadata["uploadId"])
         f.abort_multipart_upload()
 
     def multipart_links(self, **multipart_metadata) -> Dict[str, Any]:
@@ -262,7 +262,7 @@ class S3FSFileStorage(PyFSFileStorage):
             and the metadata returned by the multipart_set_content for each part.
         :returns: a dictionary of name of the link to invenio_records_resources.services.base.links.Link
         """
-        return self.low_level_file(multipart_metadata["uploadId"]).get_part_links(
+        return self.multipart_file(multipart_metadata["uploadId"]).get_part_links(
             int(multipart_metadata["parts"]), current_app.config["S3_UPLOAD_URL_EXPIRATION"]
         )
 

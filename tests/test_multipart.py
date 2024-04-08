@@ -28,17 +28,17 @@ def test_multipart_flow(base_app, s3fs):
     assert "url" in links[1]
 
     # upload the first part manually
-    low_level_file = s3fs.low_level_file(upload_metadata["uploadId"])
-    low_level_file.upload_part(1, b"0" * part_size)
-    assert len(low_level_file.get_parts(2)) == 1
+    multipart_file = s3fs.multipart_file(upload_metadata["uploadId"])
+    multipart_file.upload_part(1, b"0" * part_size)
+    assert len(multipart_file.get_parts(2)) == 1
 
     # still can not commit because not all parts were uploaded
     with pytest.raises(ValueError):
         s3fs.multipart_commit_upload(**upload_metadata)
 
     # upload the second part
-    low_level_file.upload_part(2, b"1" * last_part_size)
-    assert len(low_level_file.get_parts(2)) == 2
+    multipart_file.upload_part(2, b"1" * last_part_size)
+    assert len(multipart_file.get_parts(2)) == 2
 
     s3fs.multipart_commit_upload(**upload_metadata)
 
