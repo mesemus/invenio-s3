@@ -263,7 +263,8 @@ class S3FSFileStorage(PyFSFileStorage):
         :returns: a dictionary of name of the link to invenio_records_resources.services.base.links.Link
         """
         return self.multipart_file(multipart_metadata["uploadId"]).get_part_links(
-            int(multipart_metadata["parts"]), current_app.config["S3_UPLOAD_URL_EXPIRATION"]
+            int(multipart_metadata["parts"]),
+            current_app.config["S3_UPLOAD_URL_EXPIRATION"],
         )
 
 
